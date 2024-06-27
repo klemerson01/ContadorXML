@@ -19,7 +19,7 @@ Este projeto é uma ferramenta em Node.js para verificar se há lacunas em uma s
     
 2. **Configure o Diretório:**
 
-    Na pasta `NFCe`, inclua todos os arquivos XML que você deseja verificar.
+    Na pasta `NFCe`, exclua o arquivo .gitkeep, e inclua todos os arquivos XML que você deseja verificar.
 
         
 3. **Execute o aplicativo:**
