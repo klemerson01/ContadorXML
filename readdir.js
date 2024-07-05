@@ -11,32 +11,39 @@ var novoArray = [];
 var semLer = [];
 let countNFCeProblema = 0;
 
-const LerArquivoXML = async (xml) => {
+const extrairNumeroSerieNFCe = (data, xml) => {
   const parser = new xml2js.Parser();
   return new Promise((resolve, erro) => {
-    fs.readFile(path.join(pasta, xml), (err, data) => {
+    parser.parseString(data, (err, result) => {
       if (err) {
-        console.error("Erro ao ler o arquivo:", err);
+        console.error("Erro ao processar o arquivo XML:", err);
         return;
       }
-      parser.parseString(data, (err, result) => {
-        if (err) {
-          console.error("Erro ao processar o arquivo XML:", err);
-          return;
-        }
-        try {
-          let tagModNfe = result.nfeProc.NFe[0].infNFe[0].ide[0].mod;
-          var tagNumNFe = result.nfeProc.NFe[0].infNFe[0].ide[0].nNF;
 
-          tagModNfe == "65" ? resolve(Number(tagNumNFe[0])) : error;
-        } catch (error) {
-          resolve(0);
-          console.log("Não foi possivel ler o arquivo: ", xml);
-          semLer.push(xml);
-          countNFCeProblema++;
-        }
-      });
+      try {
+        let tagModNfce = result.nfeProc.NFe[0].infNFe[0].ide[0].mod;
+        var tagNumNFce = result.nfeProc.NFe[0].infNFe[0].ide[0].nNF;
+        let tagSerieNfce = result.nfeProc.NFe[0].infNFe[0].ide[0].serie;
+
+        tagModNfce == "65"
+          ? resolve({ NumeroNFCe: tagNumNFce[0], SerieNFCe: tagSerieNfce[0] })
+          : "error teste";
+      } catch (error) {
+        resolve(0);
+        console.log("Não foi possivel ler o arquivo", xml);
+        semLer.push(xml);
+        countNFCeProblema++;
+      }
     });
+  });
+};
+
+const LerArquivoXML = async (xml) => {
+  var retornoReadFile;
+  return new Promise(async (resolve, erro) => {
+    retornoReadFile = fs.readFileSync(path.join(pasta, xml));
+    const resultadoExtrair = await extrairNumeroSerieNFCe(retornoReadFile, xml);
+    resolve(resultadoExtrair);
   });
 };
 
@@ -49,42 +56,58 @@ if (TodosXMLs.length == 0) {
 }
 
 let countNFCeExistente = 0;
+let arraySeries = [];
+let notasFaltantes = [];
+let countNFCeFaltantes = 0;
+
+const addUniqueElement = (element) => {
+  if (!arraySeries.includes(element)) {
+    arraySeries.push(element);
+  }
+};
+
 (async () => {
   await Promise.all(
     TodosXMLs.map(async (xml) => {
-      const NumNFe = await LerArquivoXML(xml);
-      if (NumNFe > 0) {
-        novoArray.push(NumNFe);
-        countNFCeExistente++;
+      const dados = await LerArquivoXML(xml);
+      if (Number(dados.SerieNFCe) > 0) {
+        addUniqueElement(Number(dados.SerieNFCe));
       }
+
+      novoArray.push(dados);
+      countNFCeExistente++;
     })
   );
 
-  novoArray.sort((a, b) => a - b);
-  console.log("=======================================");
-  console.log("NFCe existentes na pasta: ", novoArray);
-  console.log("Contador NFCe existentes: ", countNFCeExistente);
-  console.log("=======================================");
+  for (let index = 0; index < arraySeries.length; index++) {
+    const serieAtual = arraySeries[index];
+    const filtroSerie = novoArray.filter((element) => {
+      return element.SerieNFCe == serieAtual;
+    });
+    filtroSerie.sort((a, b) => a - b);
 
-  let notasFaltantes = [];
-  let countNFCeFaltantes = 0;
-
-  for (
-    let index = novoArray[0];
-    index <= novoArray[novoArray.length - 1];
-    index++
-  ) {
-    const found = novoArray.find((element) => element == index);
-    if (found == undefined) {
-      notasFaltantes.push(index);
-      countNFCeFaltantes++;
+    for (
+      let i = filtroSerie[0].NumeroNFCe;
+      i <= filtroSerie[filtroSerie.length - 1].NumeroNFCe;
+      i++
+    ) {
+      const found = filtroSerie.find((element) => element.NumeroNFCe == i);
+      if (found == undefined) {
+        notasFaltantes.push({ NumeroNFCe: i, SerieNFCe: serieAtual });
+        countNFCeFaltantes++;
+      }
     }
   }
+
+  console.log("Contador notas com problemas:", countNFCeProblema);
+  console.log("=======================================");
   console.log("NFCe faltantes: ", notasFaltantes);
   console.log("Contador faltantes: ", countNFCeFaltantes);
+  console.log("=======================================");
+  console.log("Contador NFCe existentes: ", countNFCeExistente);
 
   const data = {
-    NFe_ou_Nfce_Problema: semLer,
+    Nfce_Problema: semLer,
     Qtd_Problemas: countNFCeProblema,
     Notas_Faltantes: notasFaltantes,
     Qtd_faltantes: countNFCeFaltantes,

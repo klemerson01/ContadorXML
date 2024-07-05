@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "graceful-fs": "^4.2.11",
     "xml2js": "^0.6.2"
   },
   "pkg": {
@@ -19,4 +20,4 @@
       "path/to/your/assets/**/*"
     ]
   }
-  }
+}
